@@ -27,3 +27,4 @@ SELECT schema_privs_are('extensions', 'service_role', array['USAGE']);
 -- Role memberships
 SELECT is_member_of('pg_read_all_data', 'postgres');
 SELECT is_member_of('pg_signal_backend', 'postgres');
+SELECT isnt_member_of('supabase_storage_admin', 'postgres');
