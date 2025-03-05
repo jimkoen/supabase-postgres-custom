@@ -182,6 +182,7 @@ EOF
                 key_id IS NOT NULL;
             END IF;
           END IF;
+          RAISE EXCEPTION 'aaaaaaa';
         END
         \$\$;
 EOF
