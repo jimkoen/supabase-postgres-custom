@@ -26,11 +26,11 @@
         nix2img = nix2container.packages.${system}.nix2container;
 
         pkgs = import nixpkgs {
-          config = { 
+          config = {
             allowUnfree = true;
             permittedInsecurePackages = [
               "v8-9.7.106.18"
-            ];  
+            ];
           };
           inherit system;
           overlays = [
@@ -145,13 +145,14 @@
           ./nix/ext/wrappers/default.nix
           ./nix/ext/supautils.nix
           ./nix/ext/plv8.nix
+          ./nix/ext/plrust.nix
         ];
 
         #Where we import and build the orioledb extension, we add on our custom extensions
         # plus the orioledb option
         #we're not using timescaledb or plv8 in the orioledb-17 version or pg 17 of supabase extensions
         orioleFilteredExtensions = builtins.filter (
-          x: 
+          x:
             x != ./nix/ext/timescaledb.nix &&
             x != ./nix/ext/timescaledb-2.9.1.nix &&
             x != ./nix/ext/plv8.nix &&
@@ -159,7 +160,7 @@
         ) ourExtensions;
 
         orioledbExtensions = orioleFilteredExtensions ++ [ ./nix/ext/orioledb.nix ];
-        dbExtensions17 = orioleFilteredExtensions; 
+        dbExtensions17 = orioleFilteredExtensions;
         getPostgresqlPackage = version:
           pkgs.postgresql."postgresql_${version}";
         # Create a 'receipt' file for a given postgresql package. This is a way
@@ -197,7 +198,7 @@
         };
 
         makeOurPostgresPkgs = version:
-          let 
+          let
             postgresql = getPostgresqlPackage version;
             extensionsToUse = if (builtins.elem version ["orioledb-17"])
               then orioledbExtensions
@@ -253,7 +254,7 @@
           recurseForDerivations = true;
         };
 
-        makePostgresDevSetup = { pkgs, name, extraSubstitutions ? {} }: 
+        makePostgresDevSetup = { pkgs, name, extraSubstitutions ? {} }:
         let
           paths = {
             migrationsDir = builtins.path {
@@ -305,11 +306,11 @@
               path = ./nix/tests/util/pgsodium_getkey.sh;
             };
           };
-          
+
           localeArchive = if pkgs.stdenv.isDarwin
             then "${pkgs.darwin.locale}/share/locale"
             else "${pkgs.glibcLocales}/lib/locale/locale-archive";
-          
+
           substitutions = {
             SHELL_PATH = "${pkgs.bash}/bin/bash";
             PGSQL_DEFAULT_PORT = "${pgsqlDefaultPort}";
@@ -333,13 +334,13 @@
             PGBOUNCER_AUTH_SCHEMA_SQL = "${paths.pgbouncerAuthSchemaSql}";
             STAT_EXTENSION_SQL = "${paths.statExtensionSql}";
             CURRENT_SYSTEM = "${system}";
-          } // extraSubstitutions;  # Merge in any extra substitutions            
+          } // extraSubstitutions;  # Merge in any extra substitutions
         in pkgs.runCommand name {
           inherit (paths) migrationsDir postgresqlSchemaSql pgbouncerAuthSchemaSql statExtensionSql;
         } ''
           set -x
           mkdir -p $out/bin $out/etc/postgresql-custom $out/etc/postgresql $out/extension-custom-scripts
-          
+
           # Copy config files with error handling
           cp ${paths.supautilsConfigFile} $out/etc/postgresql-custom/supautils.conf || { echo "Failed to copy supautils.conf"; exit 1; }
           cp ${paths.pgconfigFile} $out/etc/postgresql/postgresql.conf || { echo "Failed to copy postgresql.conf"; exit 1; }
@@ -348,7 +349,7 @@
           cp ${paths.pgHbaConfigFile} $out/etc/postgresql/pg_hba.conf || { echo "Failed to copy pg_hba.conf"; exit 1; }
           cp ${paths.pgIdentConfigFile} $out/etc/postgresql/pg_ident.conf || { echo "Failed to copy pg_ident.conf"; exit 1; }
           cp -r ${paths.postgresqlExtensionCustomScriptsPath}/* $out/extension-custom-scripts/ || { echo "Failed to copy custom scripts"; exit 1; }
-          
+
           echo "Copy operation completed"
           chmod 644 $out/etc/postgresql-custom/supautils.conf
           chmod 644 $out/etc/postgresql/postgresql.conf
@@ -356,8 +357,8 @@
           chmod 644 $out/etc/postgresql/pg_hba.conf
 
           substitute ${./nix/tools/run-server.sh.in} $out/bin/start-postgres-server \
-            ${builtins.concatStringsSep " " (builtins.attrValues (builtins.mapAttrs 
-              (name: value: "--subst-var-by '${name}' '${value}'") 
+            ${builtins.concatStringsSep " " (builtins.attrValues (builtins.mapAttrs
+              (name: value: "--subst-var-by '${name}' '${value}'")
               substitutions
             ))}
           chmod +x $out/bin/start-postgres-server
@@ -369,7 +370,7 @@
         # want.
         basePackages = let
           # Function to get the PostgreSQL version from the attribute name
-          getVersion = name: 
+          getVersion = name:
             let
               match = builtins.match "psql_([0-9]+)" name;
             in
@@ -390,13 +391,13 @@
             let
               postgresqlPackage = pkgs."postgresql_${version}";
             in
-              pkgs.callPackage ./nix/ext/pg_regress.nix { 
+              pkgs.callPackage ./nix/ext/pg_regress.nix {
                 postgresql = postgresqlPackage;
               };
           postgresql_15 = getPostgresqlPackage "15";
           postgresql_17 = getPostgresqlPackage "17";
           postgresql_orioledb-17 = getPostgresqlPackage "orioledb-17";
-        in 
+        in
         postgresVersions // {
           supabase-groonga = supabase-groonga;
           cargo-pgrx_0_11_3 = pkgs.cargo-pgrx.cargo-pgrx_0_11_3;
@@ -545,7 +546,7 @@
               chmod +x $out/bin/pg-restore
             '';
           sync-exts-versions = pkgs.runCommand "sync-exts-versions" { } ''
-            mkdir -p $out/bin 
+            mkdir -p $out/bin
             substitute ${./nix/tools/sync-exts-versions.sh.in} $out/bin/sync-exts-versions \
               --subst-var-by 'YQ' '${pkgs.yq}/bin/yq' \
               --subst-var-by 'JQ' '${pkgs.jq}/bin/jq' \
@@ -560,7 +561,7 @@
             substitute ${./nix/tools/local-infra-bootstrap.sh.in} $out/bin/local-infra-bootstrap
             chmod +x $out/bin/local-infra-bootstrap
           '';
-          dbmate-tool = 
+          dbmate-tool =
             let
               migrationsDir = ./migrations/db;
               ansibleVars = ./ansible/vars.yml;
@@ -579,7 +580,7 @@
                 makeWrapper
               ];
             } ''
-              mkdir -p $out/bin $out/migrations 
+              mkdir -p $out/bin $out/migrations
               cp -r ${migrationsDir}/* $out
               substitute ${./nix/tools/dbmate-tool.sh.in} $out/bin/dbmate-tool \
                 --subst-var-by 'PGSQL_DEFAULT_PORT' '${pgsqlDefaultPort}' \
@@ -636,22 +637,22 @@
                 cat > $out/bin/pgsodium-getkey << 'EOF'
                 #!${pkgs.bash}/bin/bash
                 set -euo pipefail
-                
+
                 TMPDIR_BASE=$(mktemp -d)
-                
+
                 if [[ "$(uname)" == "Darwin" ]]; then
                   KEY_DIR="/private/tmp/pgsodium"
                 else
                   KEY_DIR="''${PGSODIUM_KEY_DIR:-$TMPDIR_BASE/pgsodium}"
                 fi
                 KEY_FILE="$KEY_DIR/pgsodium.key"
-                
+
                 if ! mkdir -p "$KEY_DIR" 2>/dev/null; then
                   echo "Error: Could not create key directory $KEY_DIR" >&2
                   exit 1
                 fi
                 chmod 1777 "$KEY_DIR"
-                
+
                 if [[ ! -f "$KEY_FILE" ]]; then
                   if ! (dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -A n -t x1 | tr -d ' \n' > "$KEY_FILE"); then
                     if ! (openssl rand -hex 32 > "$KEY_FILE"); then
@@ -661,7 +662,7 @@
                   fi
                   chmod 644 "$KEY_FILE"
                 fi
-                
+
                 if [[ -f "$KEY_FILE" && -r "$KEY_FILE" ]]; then
                   cat "$KEY_FILE"
                 else
@@ -698,7 +699,7 @@
                 isValidFile = name:
                   let
                     isVersionSpecific = builtins.match "z_.*" name != null;
-                    matchesVersion = 
+                    matchesVersion =
                       if isVersionSpecific
                       then
                         if version == "orioledb-17"
@@ -713,13 +714,13 @@
               pkgs.lib.filterAttrs (name: _: isValidFile name) files;
 
             # Get the major version for filtering
-              majorVersion = 
+              majorVersion =
                 let
                   version = builtins.trace "pgpkg.version is: ${pgpkg.version}" pgpkg.version;
                   _ = builtins.trace "Entering majorVersion logic";
                   isOrioledbMatch = builtins.match "^17_[0-9]+$" version != null;
                   isSeventeenMatch = builtins.match "^17[.][0-9]+$" version != null;
-                  result = 
+                  result =
                     if isOrioledbMatch
                     then "orioledb-17"
                     else if isSeventeenMatch
@@ -730,9 +731,9 @@
 
             # Filter SQL test files
             filteredSqlTests = filterTestFiles majorVersion ./nix/tests/sql;
-            
+
             # Convert filtered tests to a sorted list of basenames (without extension)
-            testList = pkgs.lib.mapAttrsToList (name: _: 
+            testList = pkgs.lib.mapAttrsToList (name: _:
               builtins.substring 0 (pkgs.lib.stringLength name - 4) name
             ) filteredSqlTests;
             sortedTestList = builtins.sort (a: b: a < b) testList;
@@ -740,7 +741,7 @@
           in
           pkgs.runCommand "postgres-${pgpkg.version}-check-harness"
             {
-              nativeBuildInputs = with pkgs; [ 
+              nativeBuildInputs = with pkgs; [
                 coreutils bash perl pgpkg pg_prove pg_regress procps
                 start-postgres-server-bin which getkey-script supabase-groonga
               ];
@@ -775,12 +776,12 @@
 
               # PostgreSQL startup
               if [[ "$(uname)" == "Darwin" ]]; then
-              pg_ctl -D "$PGTAP_CLUSTER" -l "$PGTAP_CLUSTER"/postgresql.log -o "-k "$PGTAP_CLUSTER" -p 5435 -d 5" start 2>&1 
+              pg_ctl -D "$PGTAP_CLUSTER" -l "$PGTAP_CLUSTER"/postgresql.log -o "-k "$PGTAP_CLUSTER" -p 5435 -d 5" start 2>&1
               else
               mkdir -p "$PGTAP_CLUSTER/sockets"
-              pg_ctl -D "$PGTAP_CLUSTER" -l "$PGTAP_CLUSTER"/postgresql.log -o "-k $PGTAP_CLUSTER/sockets -p 5435 -d 5" start 2>&1 
+              pg_ctl -D "$PGTAP_CLUSTER" -l "$PGTAP_CLUSTER"/postgresql.log -o "-k $PGTAP_CLUSTER/sockets -p 5435 -d 5" start 2>&1
               fi || {
-              echo "pg_ctl failed to start PostgreSQL" 
+              echo "pg_ctl failed to start PostgreSQL"
               echo "Contents of postgresql.log:"
               cat "$PGTAP_CLUSTER"/postgresql.log
               exit 1
@@ -814,10 +815,10 @@
               rm -rf "$SORTED_DIR"
               pg_ctl -D "$PGTAP_CLUSTER" stop
               rm -rf $PGTAP_CLUSTER
-              
+
               # End of pgtap tests
               # from here on out we are running pg_regress tests, we use a different cluster for this
-              # which is start by the start-postgres-server-bin script 
+              # which is start by the start-postgres-server-bin script
               # start-postgres-server-bin script closely matches our AMI setup, configurations and migrations
 
               # Ensure pgsodium key directory exists with proper permissions
@@ -827,7 +828,7 @@
               fi
               unset GRN_PLUGINS_DIR
               ${start-postgres-server-bin}/bin/start-postgres-server ${getVersionArg pgpkg} --daemonize
-              
+
               for i in {1..60}; do
                   if pg_isready -h localhost -p 5435 -U supabase_admin -q; then
                       echo "PostgreSQL is ready"
@@ -868,7 +869,7 @@
                 cp "$logfile" $out/postgresql.log
               done
               exit 0
-            '';      
+            '';
     in
       rec {
         # The list of all packages that can be built with 'nix build'. The list
@@ -961,7 +962,7 @@
           pgrxVersion = "0_12_6";
           rustVersion = "1.80.0";
         };
-      };     
+      };
   }
   );
 }
