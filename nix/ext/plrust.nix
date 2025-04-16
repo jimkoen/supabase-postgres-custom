@@ -3,59 +3,75 @@
    stdenv,
    fetchFromGitHub,
    postgresql,
-   buildPgrxExtension_0_12_9,
+   buildPgrxExtension,
    cargo,
-   rust-bin
+   rust-bin,
+   cargo-binutils,
+   cargo-pgrx_0_11_3,
+   rustc
     }:
 let
   rustVersion = "1.72.0";
-  cargo = rust-bin.stable.${rustVersion}.minimal.override{
-    extensions = ["llvm-tools-preview" "rustc-dev"];
+  cargo = rust-bin.stable.${rustVersion}.default;
+
+cargo-pgrx_0_11_0 = cargo-pgrx_0_11_3.overrideAttrs {
+  version = "0.11.0";
+  hash = "";
+  cargoHash = "";
+};
+
+  buildPgrxExtension_0_11_0 = buildPgrxExtension.override {
+    cargo-pgrx = cargo-pgrx_0_11_0;
   };
 in
-buildPgrxExtension_0_12_9 rec {
+buildPgrxExtension_0_11_0 rec {
   pname = "plrust";
   version = "1.2.7";
   inherit postgresql;
 
+  strictDeps = false;
+
   src = fetchFromGitHub {
-    owner = "tcdi";
+owner = "tcdi";
     repo = pname;
     rev = "v${version}";
     hash = "sha256-RI0M6RpXG71CyrtC9Doi2yqIz3Szl+vQHtCuGczBF3o=";
   };
+  cargoHash = "sha256-a19FMK7U9KuZXcuROQDHSVc9G0GiQZ1XCrREltonxGc=";
+  useFetchCargoVendor = true;
 
-  nativeBuildInputs = [ cargo ];
-  buildInputs = [ postgresql ];
+ # nativeBuildInputs = [ cargo cargo-binutils rustc ];
+ # buildInputs = [ postgresql ];
   # update the following array when the pg_jsonschema version is updated
   # required to ensure that extensions update scripts from previous versions are generated
 
-  previousVersions = [];
-  CARGO="${cargo}/bin/cargo";
-  env = lib.optionalAttrs stdenv.isDarwin {
-    POSTGRES_LIB = "${postgresql}/lib";
-    RUSTFLAGS = "-C link-arg=-undefined -C link-arg=dynamic_lookup";
-  };
-  cargoHash = "sha256-a19FMK7U9KuZXcuROQDHSVc9G0GiQZ1XCrREltonxGc=";
+#  previousVersions = [];
+#  CARGO="${cargo}/bin/cargo";
+#  env = lib.optionalAttrs stdenv.isDarwin {
+#    POSTGRES_LIB = "${postgresql}/lib";
+#    RUSTFLAGS = "-C link-arg=-undefined -C link-arg=dynamic_lookup";
+#  };
+#  cargoHash = "sha256-a19FMK7U9KuZXcuROQDHSVc9G0GiQZ1XCrREltonxGc=";
 
   # FIXME (aseipp): testsuite tries to write files into /nix/store; we'll have
   # to fix this a bit later.
   doCheck = false;
 
-  preBuild = ''
-    echo "Processing git tags..."
-    echo '${builtins.concatStringsSep "," previousVersions}' | sed 's/,/\n/g' > git_tags.txt
-    cd ./plrustc
-    ls -lah
-    bash ./build.sh
-    mv ../build/bin/plrustc ~/.cargo/bin/
-
-    cd ../plrust
-    PG_VER=15 \
-        STD_TARGETS="x86_64-postgres-linux-gnu " \
-        ./build
-
-  '';
+ # preBuild = ''
+#
+#    echo "Processing git tags..."
+#    echo '${builtins.concatStringsSep "," previousVersions}' | sed 's/,/\n/g' > git_tags.txt
+#    cd ./plrustc
+#    ${stdenv.shell}
+#    bash ./build.sh install
+#    mv ../build/bin/plrustc ~/.cargo/bin/
+#
+#    cd ../plrust
+#    PG_VER=15 \
+#        STD_TARGETS="x86_64-postgres-linux-gnu " \
+#        ./build install
+#
+#  '';
 
   postInstall = ''
     echo "Creating SQL files for previous versions..."

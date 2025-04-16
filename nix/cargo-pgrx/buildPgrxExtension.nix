@@ -30,10 +30,11 @@
 { lib
 , cargo-pgrx
 , pkg-config
-, rustPlatform
+, makeRustPlatform
 , stdenv
 , Security
 , writeShellScriptBin
+, rust-bin
 }:
 
 # The idea behind: Use it mostly like rustPlatform.buildRustPackage and so
@@ -73,6 +74,11 @@ assert lib.asserts.assertMsg (!useFakeRustfmt -> rustfmtInNativeBuildInputs)
   "The parameter useFakeRustfmt is set to false, but rustfmt is not included in nativeBuildInputs. Either set useFakeRustfmt to true or add rustfmt from nativeBuildInputs.";
 
 let
+  rustVersion = "1.70.0";
+  rustPlatform = makeRustPlatform{ 
+    cargo = rust-bin.stable.${rustVersion}.default;
+    rustc = rust-bin.stable.${rustVersion}.default;
+  };
   fakeRustfmt = writeShellScriptBin "rustfmt" ''
     exit 0
     '';

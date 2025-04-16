@@ -62,6 +62,7 @@
                 inherit (final) makeRustPlatform;
                 inherit (final) stdenv;
                 inherit (final) writeShellScriptBin;
+                inherit (final) rust-bin;
               };
 
               buildPgrxExtension_0_11_3 = prev.buildPgrxExtension.override {
