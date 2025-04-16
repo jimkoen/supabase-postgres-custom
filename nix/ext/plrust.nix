@@ -7,24 +7,14 @@
    cargo,
    rust-bin,
    cargo-binutils,
-   cargo-pgrx_0_11_3,
+   buildPgrxExtension_0_11_3,
    rustc
     }:
 let
   rustVersion = "1.72.0";
   cargo = rust-bin.stable.${rustVersion}.default;
-
-cargo-pgrx_0_11_0 = cargo-pgrx_0_11_3.overrideAttrs {
-  version = "0.11.0";
-  hash = "";
-  cargoHash = "";
-};
-
-  buildPgrxExtension_0_11_0 = buildPgrxExtension.override {
-    cargo-pgrx = cargo-pgrx_0_11_0;
-  };
 in
-buildPgrxExtension_0_11_0 rec {
+buildPgrxExtension_0_11_3 rec {
   pname = "plrust";
   version = "1.2.7";
   inherit postgresql;
@@ -32,7 +22,7 @@ buildPgrxExtension_0_11_0 rec {
   strictDeps = false;
 
   src = fetchFromGitHub {
-owner = "tcdi";
+owner = "jimkoen";
     repo = pname;
     rev = "v${version}";
     hash = "sha256-RI0M6RpXG71CyrtC9Doi2yqIz3Szl+vQHtCuGczBF3o=";
@@ -56,6 +46,10 @@ owner = "tcdi";
   # FIXME (aseipp): testsuite tries to write files into /nix/store; we'll have
   # to fix this a bit later.
   doCheck = false;
+
+  preBuild = ''
+   cat Cargo.lock
+  '';
 
  # preBuild = ''
 #
@@ -95,7 +89,7 @@ owner = "tcdi";
 
   meta = with lib; {
     description = "PL/Rust trusted procedural language";
-    homepage = "https://github.com/tcdi/${pname}";
+    homepage = "https://github.com/jimkoen/${pname}";
     platforms = postgresql.meta.platforms;
     license = licenses.postgresql;
   };
